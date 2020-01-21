@@ -1,77 +1,54 @@
-import React, {Component} from 'react';
+import React from 'react';
 import {withRouter} from 'react-router-dom';
-import {getJwt} from "../helpers/jwt";
-import axios from 'axios';
 
-// import UserProfile from "./Userprofile";
 
-class AuthComponent extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            user: undefined,
-            message: ''
-        };
+class AuthComponent extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      returnValue: ''
+    };
+  }
 
+  getJwt = () => {
+    return localStorage.getItem('jwt_token');
+  };
+
+  CheckAuth() {
+    var jwtDecode = require('jwt-decode');
+    const tokens = this.getJwt();
+    try {
+      const decoded = jwtDecode(tokens);
+
+      const timeNow = new Date();
+      if (decoded.exp > timeNow.getTime() / 1000) {
+        return true;
+      } else {
+        return false
+      }
+    } catch (thrownValue) {
+      this.setState(
+        {
+          hasError: true
+        })
     }
+  }
 
-    componentDidMount() {
-        this.getUser();
+  componentDidMount() {
+    if (!this.CheckAuth() || this.state.hasError) {
+      this.setState({returnValue: this.props.history.push('/login')});
+    } else {
+      this.setState({returnValue: this.props.children});
     }
+  }
 
-    getUser() {
-        const jwt = getJwt();
-        if (!jwt) {
-            this.setState({
-                user: null
-            });
-            return;
-        } else {
-            this.setState({user: true})
-        }
-        this.authenticateUser()
-
-
-    }
-
-    async authenticateUser() {
-        const response = await axios.get('/hello/', {headers: {Authorization: getJwt()}});
-
-        this.setState({
-            message: response.data.message
-        });
-
-    }
-
-
-    render() {
-        const {user} = this.state;
-        if (user === undefined) {
-            return (
-                <div>
-                    Loading...
-                </div>
-            );
-        }
-
-        if (user === null) {
-            this.props.history.push('/login');
-        }
-
-
-        var childrenWithProps = React.cloneElement(this.props.children, {message: this.state.message});
-        debugger;
-        return (
-            <div>
-                {childrenWithProps}
-            </div>
-        );
-        // <UserProfile message={this.state.user}/>
-
-        // return this.props.children;
-
-
-    }
+  render() {
+    return (
+      <div>{this.state.returnValue}</div>
+    )
+  }
 }
+
 
 export default withRouter(AuthComponent);
